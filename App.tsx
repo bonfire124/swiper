@@ -1,118 +1,224 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * Generated with the TypeScript template
- * https://github.com/react-native-community/react-native-template-typescript
- *
- * @format
- */
+import React, {FC, useCallback, useEffect, useRef, useState} from 'react';
+import {SafeAreaView, View, StyleSheet, PanResponder, Animated, Text, TouchableOpacity, Dimensions} from 'react-native';
+import axios from 'axios';
 
-import React from 'react';
-import {
-  SafeAreaView,
-  StyleSheet,
-  ScrollView,
-  View,
-  Text,
-  StatusBar,
-} from 'react-native';
+const RatingButton: FC<{ text: string }> = ({text}) => {
+    return (
+        <View style={{borderRadius: 100, backgroundColor: '#000'}}>
+            <Text>
 
-import {
-  Header,
-  LearnMoreLinks,
-  Colors,
-  DebugInstructions,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+            </Text>
+        </View>
+    )
+};
 
-declare const global: {HermesInternal: null | {}};
+const screenHeight = Dimensions.get('window').height;
+const screenWidth = Dimensions.get('window').width;
+
 
 const App = () => {
-  return (
-    <>
-      <StatusBar barStyle="dark-content" />
-      <SafeAreaView>
-        <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
-          style={styles.scrollView}>
-          <Header />
-          {global.HermesInternal == null ? null : (
-            <View style={styles.engine}>
-              <Text style={styles.footer}>Engine: Hermes</Text>
-            </View>
-          )}
-          <View style={styles.body}>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Step One</Text>
-              <Text style={styles.sectionDescription}>
-                Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-                screen and then come back to see your edits.
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>See Your Changes</Text>
-              <Text style={styles.sectionDescription}>
-                <ReloadInstructions />
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Debug</Text>
-              <Text style={styles.sectionDescription}>
-                <DebugInstructions />
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Learn More</Text>
-              <Text style={styles.sectionDescription}>
-                Read the docs to discover what to do next:
-              </Text>
-            </View>
-            <LearnMoreLinks />
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </>
-  );
+
+    const [image, setImage] = useState('');
+
+    const [cards, setCards] = useState([]);
+
+    let pan = useRef(new Animated.ValueXY({x: 0, y: 0}));
+
+    const currentWidth = screenWidth / 2;
+
+    const createPanResponder = (animatedValue: any, index: number, cards: any) => {
+        return (PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onPanResponderGrant: (event, gesture) => {
+                animatedValue.setOffset({
+                    // @ts-ignore
+                    x: animatedValue.x._value,
+                    // @ts-ignore
+                    y: animatedValue.y._value
+                });
+            },
+            onPanResponderMove: (event, gesture) => {
+                animatedValue.setValue({x: gesture.dx, y: gesture.dy});
+            },
+            onPanResponderRelease: (e, gestureState) => {
+                if (gestureState.dx > (currentWidth / 2)) {
+                    moveAwayRight(animatedValue);
+                } else if (gestureState.dx < -(currentWidth / 2)) {
+                    moveAwayLeft(animatedValue);
+                } else {
+                    moveCardToCenter(animatedValue);
+                }
+
+            }
+        }))
+    };
+
+    useEffect(() => {
+        let newCards = [{id: 1, text: 'Привет'}, {id: 2, text: 'Пока'}, {id: 3, text: 'И снова привет'}].reverse();
+        newCards = newCards.map((item, index) => {
+            const animatedValue = new Animated.ValueXY({x: currentWidth - 125, y: screenHeight / 2 - 200});
+            return {
+                ...item,
+                index,
+                animatedValue,
+
+            }
+        });
+
+        newCards = newCards.map((item, index) => {
+            return {
+                ...item,
+                // @ts-ignore
+                panHandlers: createPanResponder(item.animatedValue, index, newCards).panHandlers
+            }
+        });
+
+
+        // @ts-ignore
+        setCards(newCards);
+        console.log('before', {...pan});
+        // @ts-ignore
+        pan.current = newCards[newCards.length - 1].animatedValue
+        console.log('after', {...pan});
+
+
+    }, []);
+    const moveCardToCenter = (animatedValue: any) => {
+        Animated.timing(animatedValue, {
+            toValue: {x: 0, y: 0},
+            duration: 300,
+            useNativeDriver: false
+        }).start(() => {
+            animatedValue.flattenOffset()
+        });
+    };
+
+    const moveAwayRight = (animatedValue: any) => {
+        Animated.timing(animatedValue, {
+            toValue: {
+                x: currentWidth * 4,
+                // @ts-ignore
+                y: animatedValue.y._value
+            },
+            duration: 100,
+            useNativeDriver: false
+        }).start(() => {
+            console.log('cards', {...cards});
+            //pan.current = cards[cards.length - 2].animatedValue
+        });
+    };
+
+
+    const moveAwayLeft = (animatedValue: any) => {
+
+        Animated.timing(animatedValue, {
+            toValue: {
+                x: -(currentWidth * 4),
+                // @ts-ignore
+                y: animatedValue.y._value
+            },
+            duration: 100,
+            useNativeDriver: false
+        }).start();
+    };
+
+
+    return <SafeAreaView style={styles.container}>
+
+        {cards.map((item, index) => <Animated.View
+            style={[
+                styles.square,
+
+                // @ts-ignore
+                item.animatedValue.getLayout(),
+                {
+                    transform: [{
+                        // @ts-ignore
+                        rotate: item.animatedValue.x.interpolate({
+                            inputRange: [-125, currentWidth - 125, screenWidth],
+                            outputRange: ['-35deg', '0deg', '35deg']
+                        })
+                    }]
+                }
+            ]}
+            // @ts-ignore
+            {...item.panHandlers}
+        >
+
+            <Text
+                style={{color: '#000'}}>{
+                // @ts-ignore
+                item.text
+            }</Text>
+        </Animated.View>)}
+
+
+        <Animated.View style={[{
+            width: pan.current.x.interpolate({
+                inputRange: [-(currentWidth * 4), 0, currentWidth - 125, currentWidth + currentWidth / 2, currentWidth * 4],
+                outputRange: [60, 60, 50, 50, 50]
+            }),
+            height: pan.current.x.interpolate({
+                inputRange: [-(currentWidth * 4), 0, currentWidth - 125, currentWidth + currentWidth / 2, currentWidth * 4],
+                outputRange: [60, 60, 50, 50, 50]
+            }),
+            borderRadius: 40,
+            backgroundColor: '#000',
+            position: 'absolute',
+            bottom: 20,
+            left: 20,
+            justifyContent: 'center',
+            alignItems: 'center'
+        }]}>
+            <Text style={{color: '#fff'}}>
+                1
+            </Text>
+        </Animated.View>
+        <Animated.View style={{
+            width: pan.current.x.interpolate({
+                inputRange: [-(currentWidth * 4), 0, currentWidth - 125, currentWidth + currentWidth / 2, currentWidth * 4],
+                outputRange: [50, 50, 50, 60, 60]  // 0 : 150, 0.5 : 75, 1 : 0
+            }),
+            height: pan.current.x.interpolate({
+                inputRange: [-(currentWidth * 4), 0, currentWidth - 125, currentWidth + currentWidth / 2, currentWidth * 4],
+                outputRange: [50, 50, 50, 60, 60]  // 0 : 150, 0.5 : 75, 1 : 0
+            }),
+            borderRadius: 100,
+            backgroundColor: '#000',
+            position: 'absolute',
+            bottom: 20,
+            right: 20,
+            justifyContent: 'center',
+            alignItems: 'center'
+        }}>
+            <Text style={{color: '#fff'}}>
+                2
+            </Text>
+        </Animated.View>
+
+        {/* {!!image && <Image source={{uri: image}}
+                               style={{flex: 1, resizeMode: 'contain'}}/>}*/}
+
+    </SafeAreaView>;
 };
 
 const styles = StyleSheet.create({
-  scrollView: {
-    backgroundColor: Colors.lighter,
-  },
-  engine: {
-    position: 'absolute',
-    right: 0,
-  },
-  body: {
-    backgroundColor: Colors.white,
-  },
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: Colors.black,
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-    color: Colors.dark,
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-  footer: {
-    color: Colors.dark,
-    fontSize: 12,
-    fontWeight: '600',
-    padding: 4,
-    paddingRight: 12,
-    textAlign: 'right',
-  },
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    square: {
+        position: 'absolute',
+        width: 250,
+        height: 400,
+        borderRadius: 50,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#FF0000'
+    }
 });
 
 export default App;
