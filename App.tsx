@@ -1,6 +1,17 @@
 import React, {FC, useCallback, useEffect, useRef, useState} from 'react';
-import {SafeAreaView, View, StyleSheet, PanResponder, Animated, Text, TouchableOpacity, Dimensions} from 'react-native';
+import {
+    SafeAreaView,
+    View,
+    StyleSheet,
+    PanResponder,
+    Animated,
+    Text,
+    TouchableOpacity,
+    Dimensions,
+    Image
+} from 'react-native';
 import axios from 'axios';
+import Card from "./src/components/Card";
 
 const RatingButton: FC<{ text: string }> = ({text}) => {
     return (
@@ -15,191 +26,114 @@ const RatingButton: FC<{ text: string }> = ({text}) => {
 const screenHeight = Dimensions.get('window').height;
 const screenWidth = Dimensions.get('window').width;
 
-
 const App = () => {
 
-    const [image, setImage] = useState('');
+    const cardWidth = screenWidth - 50;
+    const cardHeight = screenHeight - 150;
+    const startCoordinationX = (screenWidth / 2) - (cardWidth / 2);
 
-    const [cards, setCards] = useState([]);
+    const startCoordinationY = ((screenHeight / 2) - (cardHeight / 2));
+    const [cards, setCards] = useState<{ id: number, text: string }[]>([]);
 
-    let pan = useRef(new Animated.ValueXY({x: 0, y: 0}));
-
-    const currentWidth = screenWidth / 2;
-
-    const createPanResponder = (animatedValue: any, index: number, cards: any) => {
-        return (PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
-            onPanResponderGrant: (event, gesture) => {
-                animatedValue.setOffset({
-                    // @ts-ignore
-                    x: animatedValue.x._value,
-                    // @ts-ignore
-                    y: animatedValue.y._value
-                });
-            },
-            onPanResponderMove: (event, gesture) => {
-                animatedValue.setValue({x: gesture.dx, y: gesture.dy});
-            },
-            onPanResponderRelease: (e, gestureState) => {
-                if (gestureState.dx > (currentWidth / 2)) {
-                    moveAwayRight(animatedValue);
-                } else if (gestureState.dx < -(currentWidth / 2)) {
-                    moveAwayLeft(animatedValue);
-                } else {
-                    moveCardToCenter(animatedValue);
-                }
-
-            }
-        }))
-    };
+    let ballAnimatedValue = useRef(new Animated.ValueXY({x: startCoordinationX, y: startCoordinationY})).current;
 
     useEffect(() => {
-        let newCards = [{id: 1, text: 'Привет'}, {id: 2, text: 'Пока'}, {id: 3, text: 'И снова привет'}].reverse();
-        newCards = newCards.map((item, index) => {
-            const animatedValue = new Animated.ValueXY({x: currentWidth - 125, y: screenHeight / 2 - 200});
-            return {
-                ...item,
-                index,
-                animatedValue,
-
-            }
-        });
-
-        newCards = newCards.map((item, index) => {
-            return {
-                ...item,
-                // @ts-ignore
-                panHandlers: createPanResponder(item.animatedValue, index, newCards).panHandlers
-            }
-        });
-
-
-        // @ts-ignore
-        setCards(newCards);
-        console.log('before', {...pan});
-        // @ts-ignore
-        pan.current = newCards[newCards.length - 1].animatedValue
-        console.log('after', {...pan});
-
-
+        let newCards = [
+            {id: 1, text: 'Привет'},
+            {id: 2, text: 'Пока'},
+            {id: 3, text: 'И снова привет'},
+            {id: 4, text: 'Как'},
+            {id: 5, text: 'Дела'},
+            {id: 6, text: 'Сладких '},
+            {id: 7, text: 'Снов'},
+        ].reverse();
+        setCards(newCards)
     }, []);
-    const moveCardToCenter = (animatedValue: any) => {
-        Animated.timing(animatedValue, {
-            toValue: {x: 0, y: 0},
-            duration: 300,
-            useNativeDriver: false
-        }).start(() => {
-            animatedValue.flattenOffset()
-        });
-    };
 
-    const moveAwayRight = (animatedValue: any) => {
-        Animated.timing(animatedValue, {
-            toValue: {
-                x: currentWidth * 4,
-                // @ts-ignore
-                y: animatedValue.y._value
-            },
-            duration: 100,
-            useNativeDriver: false
-        }).start(() => {
-            console.log('cards', {...cards});
-            //pan.current = cards[cards.length - 2].animatedValue
-        });
-    };
+    return (<SafeAreaView style={styles.container}>
+        {cards.map((item) =>
+            <Card text={item.text}
+                  onCapture={(x, y) => {
+                      ballAnimatedValue.setValue({x, y})
+                  }}
+                  cardWidth={cardWidth}
+                  cardHeight={cardHeight}
+                  onMove={(x, y) => {
+                      ballAnimatedValue.setValue({x, y})
+                  }}
+                  onRelease={(direction) => {
+                      Animated.timing(ballAnimatedValue, {
+                          duration: 300,
+                          useNativeDriver: false,
+                          toValue: {x: startCoordinationX, y: startCoordinationY}
+                      }).start();
+                  }}
+                  key={item.id}
+            />)}
 
-
-    const moveAwayLeft = (animatedValue: any) => {
-
-        Animated.timing(animatedValue, {
-            toValue: {
-                x: -(currentWidth * 4),
-                // @ts-ignore
-                y: animatedValue.y._value
-            },
-            duration: 100,
-            useNativeDriver: false
-        }).start();
-    };
-
-
-    return <SafeAreaView style={styles.container}>
-
-        {cards.map((item, index) => <Animated.View
-            style={[
-                styles.square,
-
-                // @ts-ignore
-                item.animatedValue.getLayout(),
-                {
-                    transform: [{
-                        // @ts-ignore
-                        rotate: item.animatedValue.x.interpolate({
-                            inputRange: [-125, currentWidth - 125, screenWidth],
-                            outputRange: ['-35deg', '0deg', '35deg']
-                        })
-                    }]
-                }
-            ]}
-            // @ts-ignore
-            {...item.panHandlers}
-        >
-
-            <Text
-                style={{color: '#000'}}>{
-                // @ts-ignore
-                item.text
-            }</Text>
-        </Animated.View>)}
-
-
-        <Animated.View style={[{
-            width: pan.current.x.interpolate({
-                inputRange: [-(currentWidth * 4), 0, currentWidth - 125, currentWidth + currentWidth / 2, currentWidth * 4],
-                outputRange: [60, 60, 50, 50, 50]
-            }),
-            height: pan.current.x.interpolate({
-                inputRange: [-(currentWidth * 4), 0, currentWidth - 125, currentWidth + currentWidth / 2, currentWidth * 4],
-                outputRange: [60, 60, 50, 50, 50]
-            }),
-            borderRadius: 40,
-            backgroundColor: '#000',
-            position: 'absolute',
-            bottom: 20,
-            left: 20,
-            justifyContent: 'center',
-            alignItems: 'center'
-        }]}>
-            <Text style={{color: '#fff'}}>
-                1
-            </Text>
+        <Animated.View style={[
+            styles.button, styles.leftButton, {
+                width: ballAnimatedValue.x.interpolate({
+                    inputRange: [
+                        screenWidth * -2.5,
+                        0 - cardWidth / 2,
+                        startCoordinationX,
+                        screenWidth - cardWidth / 2,
+                        screenWidth * 2.5],
+                    outputRange: [72, 68, 56, 56, 56]
+                }),
+                height: ballAnimatedValue.x.interpolate({
+                    inputRange: [
+                        screenWidth * -2.5,
+                        0 - cardWidth / 2,
+                        startCoordinationX,
+                        screenWidth - cardWidth / 2,
+                        screenWidth * 2.5],
+                    outputRange: [72, 68, 56, 56, 56]
+                }),
+                opacity: ballAnimatedValue.x.interpolate({
+                    inputRange: [screenWidth * -2.5,
+                        0 - cardWidth / 2,
+                        startCoordinationX,
+                        screenWidth - cardWidth / 2,
+                        screenWidth * 2.5],
+                    outputRange: [1, 1, 1, 0.4, 0.3]
+                })
+            }]}>
+            <Image source={require('./src/img/dislike.png')} style={{marginTop: 5}}/>
         </Animated.View>
-        <Animated.View style={{
-            width: pan.current.x.interpolate({
-                inputRange: [-(currentWidth * 4), 0, currentWidth - 125, currentWidth + currentWidth / 2, currentWidth * 4],
-                outputRange: [50, 50, 50, 60, 60]  // 0 : 150, 0.5 : 75, 1 : 0
-            }),
-            height: pan.current.x.interpolate({
-                inputRange: [-(currentWidth * 4), 0, currentWidth - 125, currentWidth + currentWidth / 2, currentWidth * 4],
-                outputRange: [50, 50, 50, 60, 60]  // 0 : 150, 0.5 : 75, 1 : 0
-            }),
-            borderRadius: 100,
-            backgroundColor: '#000',
-            position: 'absolute',
-            bottom: 20,
-            right: 20,
-            justifyContent: 'center',
-            alignItems: 'center'
-        }}>
-            <Text style={{color: '#fff'}}>
-                2
-            </Text>
+        <Animated.View style={[
+            styles.button, styles.rightButton, {
+                width: ballAnimatedValue.x.interpolate({
+                    inputRange: [
+                        screenWidth * -2.5,
+                        0 - cardWidth / 2,
+                        startCoordinationX,
+                        screenWidth - cardWidth / 2,
+                        screenWidth * 2.5],
+                    outputRange: [56, 56, 56, 68, 72]
+                }),
+                height: ballAnimatedValue.x.interpolate({
+                    inputRange: [
+                        screenWidth * -2.5,
+                        0 - cardWidth / 2,
+                        startCoordinationX,
+                        screenWidth - cardWidth / 2,
+                        screenWidth * 2.5],
+                    outputRange: [56, 56, 56, 68, 72]
+                }),
+                opacity: ballAnimatedValue.x.interpolate({
+                    inputRange: [screenWidth * -2.5,
+                        0 - cardWidth / 2,
+                        startCoordinationX,
+                        screenWidth - cardWidth / 2,
+                        screenWidth * 2.5],
+                    outputRange: [0.3, 0.4, 1, 1, 1]
+                })
+            }]}>
+            <Image source={require('./src/img/like.png')}/>
         </Animated.View>
-
-        {/* {!!image && <Image source={{uri: image}}
-                               style={{flex: 1, resizeMode: 'contain'}}/>}*/}
-
-    </SafeAreaView>;
+    </SafeAreaView>);
 };
 
 const styles = StyleSheet.create({
@@ -208,16 +142,28 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    square: {
-        position: 'absolute',
-        width: 250,
-        height: 400,
+    button: {
+        width: 56,
+        height: 56,
+        backgroundColor: '#000',
         borderRadius: 50,
-        backgroundColor: '#fff',
-        alignItems: 'center',
+        position: 'absolute',
+        bottom: 45,
         justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: '#FF0000'
+        alignItems: 'center'
+    },
+    leftButton: {
+        left: 70
+    },
+    rightButton: {
+        right: 70,
+        backgroundColor: '#EB5757'
+    },
+    box: {
+        height: 150,
+        width: 150,
+        backgroundColor: "blue",
+        borderRadius: 5
     }
 });
 
