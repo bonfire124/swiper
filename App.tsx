@@ -8,7 +8,7 @@ import {
     Text,
     TouchableOpacity,
     Dimensions,
-    Image
+    Image, ActivityIndicator
 } from 'react-native';
 import axios from 'axios';
 import Card from "./src/components/Card";
@@ -28,111 +28,127 @@ const screenWidth = Dimensions.get('window').width;
 
 const App = () => {
 
+    const [loading, setLoading] = useState(true);
     const cardWidth = screenWidth - 50;
     const cardHeight = screenHeight - 150;
     const startCoordinationX = (screenWidth / 2) - (cardWidth / 2);
 
     const startCoordinationY = ((screenHeight / 2) - (cardHeight / 2));
-    const [cards, setCards] = useState<{ id: number, text: string }[]>([]);
+    const [cards, setCards] = useState<{
+        image: any;
+        id: number, text: string
+    }[]>([]);
 
     let ballAnimatedValue = useRef(new Animated.ValueXY({x: startCoordinationX, y: startCoordinationY})).current;
-
     useEffect(() => {
-        let newCards = [
-            {id: 1, text: 'Привет'},
-            {id: 2, text: 'Пока'},
-            {id: 3, text: 'И снова привет'},
-            {id: 4, text: 'Как'},
-            {id: 5, text: 'Дела'},
-            {id: 6, text: 'Сладких '},
-            {id: 7, text: 'Снов'},
-        ].reverse();
-        setCards(newCards)
+        axios.get('https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?sol=1000&page=1&api_key=16fx0ZnQtVvfsRCELKDYqdQ9YgCLereZKkKjNMxL')
+            .then((resp) => {
+                setCards(resp.data.photos.map((item: {
+                    img_src: any;
+                    rover: {
+                        id: number
+                        landing_date: string;
+                        launch_date: string
+                        name: string
+                    }
+                }, index: any) => {
+                    return {
+                        id: index,
+                        image: item.img_src,
+                        text: item.rover.name
+                    }
+                }));
+            }).catch((error) => {
+            console.log(error.response);
+        });
     }, []);
 
     return (<SafeAreaView style={styles.container}>
-        {cards.map((item) =>
-            <Card text={item.text}
-                  onCapture={(x, y) => {
-                      ballAnimatedValue.setValue({x, y})
-                  }}
-                  cardWidth={cardWidth}
-                  cardHeight={cardHeight}
-                  onMove={(x, y) => {
-                      ballAnimatedValue.setValue({x, y})
-                  }}
-                  onRelease={(direction) => {
-                      Animated.timing(ballAnimatedValue, {
-                          duration: 300,
-                          useNativeDriver: false,
-                          toValue: {x: startCoordinationX, y: startCoordinationY}
-                      }).start();
-                  }}
-                  key={item.id}
-            />)}
+        {!cards.length ? <ActivityIndicator size={'large'}/> : <>
+            {cards.map((item) =>
+                <Card text={item.text}
+                      image={item.image}
+                      onCapture={(x, y) => {
+                          ballAnimatedValue.setValue({x, y})
+                      }}
+                      cardWidth={cardWidth}
+                      cardHeight={cardHeight}
+                      onMove={(x, y) => {
+                          ballAnimatedValue.setValue({x, y})
+                      }}
+                      onRelease={(direction) => {
+                          Animated.timing(ballAnimatedValue, {
+                              duration: 300,
+                              useNativeDriver: false,
+                              toValue: {x: startCoordinationX, y: startCoordinationY}
+                          }).start();
+                      }}
+                      key={item.id}
+                />)}
 
-        <Animated.View style={[
-            styles.button, styles.leftButton, {
-                width: ballAnimatedValue.x.interpolate({
-                    inputRange: [
-                        screenWidth * -2.5,
-                        0 - cardWidth / 2,
-                        startCoordinationX,
-                        screenWidth - cardWidth / 2,
-                        screenWidth * 2.5],
-                    outputRange: [72, 68, 56, 56, 56]
-                }),
-                height: ballAnimatedValue.x.interpolate({
-                    inputRange: [
-                        screenWidth * -2.5,
-                        0 - cardWidth / 2,
-                        startCoordinationX,
-                        screenWidth - cardWidth / 2,
-                        screenWidth * 2.5],
-                    outputRange: [72, 68, 56, 56, 56]
-                }),
-                opacity: ballAnimatedValue.x.interpolate({
-                    inputRange: [screenWidth * -2.5,
-                        0 - cardWidth / 2,
-                        startCoordinationX,
-                        screenWidth - cardWidth / 2,
-                        screenWidth * 2.5],
-                    outputRange: [1, 1, 1, 0.4, 0.3]
-                })
-            }]}>
-            <Image source={require('./src/img/dislike.png')} style={{marginTop: 5}}/>
-        </Animated.View>
-        <Animated.View style={[
-            styles.button, styles.rightButton, {
-                width: ballAnimatedValue.x.interpolate({
-                    inputRange: [
-                        screenWidth * -2.5,
-                        0 - cardWidth / 2,
-                        startCoordinationX,
-                        screenWidth - cardWidth / 2,
-                        screenWidth * 2.5],
-                    outputRange: [56, 56, 56, 68, 72]
-                }),
-                height: ballAnimatedValue.x.interpolate({
-                    inputRange: [
-                        screenWidth * -2.5,
-                        0 - cardWidth / 2,
-                        startCoordinationX,
-                        screenWidth - cardWidth / 2,
-                        screenWidth * 2.5],
-                    outputRange: [56, 56, 56, 68, 72]
-                }),
-                opacity: ballAnimatedValue.x.interpolate({
-                    inputRange: [screenWidth * -2.5,
-                        0 - cardWidth / 2,
-                        startCoordinationX,
-                        screenWidth - cardWidth / 2,
-                        screenWidth * 2.5],
-                    outputRange: [0.3, 0.4, 1, 1, 1]
-                })
-            }]}>
-            <Image source={require('./src/img/like.png')}/>
-        </Animated.View>
+            <Animated.View style={[
+                styles.button, styles.leftButton, {
+                    width: ballAnimatedValue.x.interpolate({
+                        inputRange: [
+                            screenWidth * -2.5,
+                            0 - cardWidth / 2,
+                            startCoordinationX,
+                            screenWidth - cardWidth / 2,
+                            screenWidth * 2.5],
+                        outputRange: [72, 68, 56, 56, 56]
+                    }),
+                    height: ballAnimatedValue.x.interpolate({
+                        inputRange: [
+                            screenWidth * -2.5,
+                            0 - cardWidth / 2,
+                            startCoordinationX,
+                            screenWidth - cardWidth / 2,
+                            screenWidth * 2.5],
+                        outputRange: [72, 68, 56, 56, 56]
+                    }),
+                    opacity: ballAnimatedValue.x.interpolate({
+                        inputRange: [screenWidth * -2.5,
+                            0 - cardWidth / 2,
+                            startCoordinationX,
+                            screenWidth - cardWidth / 2,
+                            screenWidth * 2.5],
+                        outputRange: [1, 1, 1, 0.4, 0.3]
+                    })
+                }]}>
+                <Image source={require('./src/img/dislike.png')} style={{marginTop: 5}}/>
+            </Animated.View>
+            <Animated.View style={[
+                styles.button, styles.rightButton, {
+                    width: ballAnimatedValue.x.interpolate({
+                        inputRange: [
+                            screenWidth * -2.5,
+                            0 - cardWidth / 2,
+                            startCoordinationX,
+                            screenWidth - cardWidth / 2,
+                            screenWidth * 2.5],
+                        outputRange: [56, 56, 56, 68, 72]
+                    }),
+                    height: ballAnimatedValue.x.interpolate({
+                        inputRange: [
+                            screenWidth * -2.5,
+                            0 - cardWidth / 2,
+                            startCoordinationX,
+                            screenWidth - cardWidth / 2,
+                            screenWidth * 2.5],
+                        outputRange: [56, 56, 56, 68, 72]
+                    }),
+                    opacity: ballAnimatedValue.x.interpolate({
+                        inputRange: [screenWidth * -2.5,
+                            0 - cardWidth / 2,
+                            startCoordinationX,
+                            screenWidth - cardWidth / 2,
+                            screenWidth * 2.5],
+                        outputRange: [0.3, 0.4, 1, 1, 1]
+                    })
+                }]}>
+                <Image source={require('./src/img/like.png')}/>
+            </Animated.View>
+        </>}
     </SafeAreaView>);
 };
 

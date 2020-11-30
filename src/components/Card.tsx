@@ -1,5 +1,5 @@
 import React, {FC, useRef} from 'react';
-import {View, StyleSheet, Animated, PanResponder, Text, Dimensions} from "react-native";
+import {View, StyleSheet, Animated, PanResponder, Text, Dimensions, Image} from "react-native";
 
 interface IProps {
     text: string;
@@ -95,6 +95,9 @@ const Card: FC<IProps> = ({text, image, cardHeight = 400, cardWidth = 250, onCap
                 }]
             }
         ]} {...panResponder.panHandlers}>
+            {!!image && <Image source={{uri: image}}
+                               style={{width: cardWidth, height: cardHeight,borderRadius: 14}}
+            />}
             {!!text &&
             <Text style={styles.cardText}>
                 {text}
@@ -108,14 +111,18 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width: 250,
         height: 400,
-        borderWidth: 1,
-        borderRadius: 7,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#FFF'
+        backgroundColor: '#FFF',
     },
     cardText: {
-        fontSize: 16
+        position: 'absolute',
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: '500',
+        top: 24,
+        left: 24
     }
 });
 
