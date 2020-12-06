@@ -11,22 +11,14 @@ import {
     Image, ActivityIndicator
 } from 'react-native';
 import axios from 'axios';
-import Card from "./src/components/Card";
+import Card from "../components/Card";
+import {R} from "../resourses/R";
 
-const RatingButton: FC<{ text: string }> = ({text}) => {
-    return (
-        <View style={{borderRadius: 100, backgroundColor: '#000'}}>
-            <Text>
-
-            </Text>
-        </View>
-    )
-};
 
 const screenHeight = Dimensions.get('window').height;
 const screenWidth = Dimensions.get('window').width;
 
-const App = () => {
+const CardsScreen = () => {
 
     const [loading, setLoading] = useState(true);
     const cardWidth = screenWidth - 50;
@@ -62,29 +54,35 @@ const App = () => {
             console.log(error.response);
         });
     }, []);
-
     return (<SafeAreaView style={styles.container}>
         {!cards.length ? <ActivityIndicator size={'large'}/> : <>
-            {cards.map((item) =>
-                <Card text={item.text}
-                      image={item.image}
-                      onCapture={(x, y) => {
-                          ballAnimatedValue.setValue({x, y})
-                      }}
-                      cardWidth={cardWidth}
-                      cardHeight={cardHeight}
-                      onMove={(x, y) => {
-                          ballAnimatedValue.setValue({x, y})
-                      }}
-                      onRelease={(direction) => {
-                          Animated.timing(ballAnimatedValue, {
-                              duration: 300,
-                              useNativeDriver: false,
-                              toValue: {x: startCoordinationX, y: startCoordinationY}
-                          }).start();
-                      }}
-                      key={item.id}
-                />)}
+            {cards.map((item, index) => {
+                    return (<Card text={item.text}
+                                  image={item.image}
+                                  onCapture={(x, y) => {
+                                      ballAnimatedValue.setValue({x, y})
+                                  }}
+                                  cardWidth={cardWidth}
+                                  cardHeight={cardHeight}
+                                  onMove={(x, y) => {
+                                      ballAnimatedValue.setValue({x, y})
+                                  }}
+                                  onRelease={(direction) => {
+                                      Animated.timing(ballAnimatedValue, {
+                                          duration: 300,
+                                          useNativeDriver: false,
+                                          toValue: {x: startCoordinationX, y: startCoordinationY}
+                                      }).start();
+                                      if (direction !== 'center') {
+                                          cards.pop();
+                                          setCards([...cards])
+                                      }
+                                  }}
+                                  key={item.id}
+                        />
+                    )
+                }
+            )}
 
             <Animated.View style={[
                 styles.button, styles.leftButton, {
@@ -115,7 +113,7 @@ const App = () => {
                         outputRange: [1, 1, 1, 0.4, 0.3]
                     })
                 }]}>
-                <Image source={require('./src/img/dislike.png')} style={{marginTop: 5}}/>
+                <Image source={R.images.dislike} style={{marginTop: 5}}/>
             </Animated.View>
             <Animated.View style={[
                 styles.button, styles.rightButton, {
@@ -146,7 +144,7 @@ const App = () => {
                         outputRange: [0.3, 0.4, 1, 1, 1]
                     })
                 }]}>
-                <Image source={require('./src/img/like.png')}/>
+                <Image source={R.images.like}/>
             </Animated.View>
         </>}
     </SafeAreaView>);
@@ -183,4 +181,4 @@ const styles = StyleSheet.create({
     }
 });
 
-export default App;
+export default CardsScreen;
